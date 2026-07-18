@@ -1,0 +1,6 @@
+services:
+  bot:
+    image: ghcr.io/redim89/telegram_carousel_bot:latest
+    build: .
+    restart: unless-stopped
+    env_file: .env

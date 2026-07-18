@@ -1,0 +1,12 @@
+.git
+.venv
+__pycache__
+*.pyc
+.env
+data
+tests
+.github
+.pytest_cache
+.ruff_cache
+CLAUDE.md
+README.md

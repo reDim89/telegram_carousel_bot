@@ -1,0 +1,28 @@
+[project]
+name = "telegram-carousel-bot"
+version = "0.1.0"
+description = "Telegram bot that turns a batch of images into a swipable carousel"
+requires-python = ">=3.12"
+# >=3.30 required for rich messages / slideshow (Bot API 10.2)
+dependencies = ["aiogram>=3.30"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.25",
+    "ruff>=0.8",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
