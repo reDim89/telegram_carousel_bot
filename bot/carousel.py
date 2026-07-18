@@ -14,26 +14,28 @@ def _text_block(text: str) -> str:
 
 
 def post_message(
-    file_ids: list[str], caption: str | None = None, body: str | None = None
+    file_ids: list[str],
+    caption: str | None = None,
+    body: str | None = None,
+    text_position: str = "above",
 ) -> InputRichMessage:
     """Rich message (Bot API 10.2+) shaped like a post: the text — body (typed
-    after the photos) and/or caption (attached to the photos) — as plain <p>
-    paragraphs on top, then a <tg-slideshow> (native swipable carousel with
-    dots). No headings: the user's text is never restyled. Authored as HTML so
-    the Telegram-HTML strings taken verbatim from Message.html_text keep the
-    user's formatting exactly (bold, links, spoilers, custom emoji, ...).
-    Photos are referenced via tg://photo?id= links resolved by `media`.
+    after the photos) and/or caption (attached to the photos) — as a plain <p>
+    block above or below (`text_position`) the <tg-slideshow> (native swipable
+    carousel with dots). No headings: the user's text is never restyled.
+    Authored as HTML so the Telegram-HTML strings taken verbatim from
+    Message.html_text keep the user's formatting exactly (bold, links,
+    spoilers, custom emoji, ...). Photos are referenced via tg://photo?id=
+    links resolved by `media`.
     """
     images = "".join(f'<img src="tg://photo?id=p{i}">' for i in range(len(file_ids)))
-    parts = []
-    if body:
-        parts.append(_text_block(body))
-    if caption:
-        parts.append(_text_block(caption))
-    if len(file_ids) == 1:
-        parts.append(images)
+    if len(file_ids) > 1:
+        images = f"<tg-slideshow>{images}</tg-slideshow>"
+    texts = [_text_block(t) for t in (body, caption) if t]
+    if text_position == "below":
+        parts = [images, *texts]
     else:
-        parts.append(f"<tg-slideshow>{images}</tg-slideshow>")
+        parts = [*texts, images]
     return InputRichMessage(
         html="".join(parts),
         # The text carries the user's entities verbatim; auto-detection could

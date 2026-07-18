@@ -3,10 +3,13 @@ from dataclasses import dataclass
 
 @dataclass
 class PendingPost:
-    """A collected carousel waiting for the user to provide/skip a title."""
+    """A collected carousel moving through the dialog: first awaiting the post
+    text, then (if there is any text) awaiting the text position choice."""
 
     file_ids: list[str]
     caption: str | None = None
+    body: str | None = None
+    awaiting_position: bool = False
 
 
 def merge_pending(
@@ -15,8 +18,9 @@ def merge_pending(
     file_ids: list[str],
     caption: str | None,
 ) -> PendingPost:
-    """Store a fresh collection, or extend one already awaiting a title
-    (photos sent while the title question is open join the same post)."""
+    """Store a fresh collection, or extend one already in the dialog
+    (photos sent mid-dialog join the same post and restart it at the
+    text question)."""
     post = pending.get(chat_id)
     if post is None:
         post = PendingPost(list(file_ids), caption)
@@ -24,4 +28,5 @@ def merge_pending(
     else:
         post.file_ids.extend(file_ids)
         post.caption = caption or post.caption
+        post.awaiting_position = False
     return post

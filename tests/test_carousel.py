@@ -15,13 +15,18 @@ def test_post_message_builds_slideshow_html_with_media_refs():
     ]
 
 
-def test_post_message_puts_text_above_photos_without_headings():
+SLIDESHOW = '<tg-slideshow><img src="tg://photo?id=p0"><img src="tg://photo?id=p1"></tg-slideshow>'
+
+
+def test_post_message_text_above_by_default_without_headings():
     msg = post_message(["f1", "f2"], caption="cap", body="Typed text")
-    assert msg.html == (
-        "<p>Typed text</p><p>cap</p>"
-        '<tg-slideshow><img src="tg://photo?id=p0"><img src="tg://photo?id=p1"></tg-slideshow>'
-    )
+    assert msg.html == f"<p>Typed text</p><p>cap</p>{SLIDESHOW}"
     assert "<h1>" not in msg.html
+
+
+def test_post_message_text_below_when_chosen():
+    msg = post_message(["f1", "f2"], caption="cap", body="Typed text", text_position="below")
+    assert msg.html == f"{SLIDESHOW}<p>Typed text</p><p>cap</p>"
 
 
 def test_post_message_passes_user_html_through_verbatim():

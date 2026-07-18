@@ -22,3 +22,13 @@ def test_later_caption_wins():
     merge_pending(pending, 1, ["a"], "old")
     post = merge_pending(pending, 1, ["b"], "new")
     assert post.caption == "new"
+
+
+def test_new_photos_restart_dialog_at_text_question():
+    pending: dict[int, PendingPost] = {}
+    post = merge_pending(pending, 1, ["a"], None)
+    post.body = "text"
+    post.awaiting_position = True
+    merged = merge_pending(pending, 1, ["b"], None)
+    assert merged.awaiting_position is False
+    assert merged.file_ids == ["a", "b"]
