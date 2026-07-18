@@ -1,13 +1,13 @@
 # Telegram Carousel Bot
 
-Send the bot several photos (as an album or one by one) and it replies with a native
-Telegram **slideshow** — dot indicators on the image, swipable in place — that you can
-forward to channels. Built on rich messages (`sendRichMessage` + slideshow block,
-Bot API 10.2, July 2026). The bot is stateless: it collects your photos (even ones
-sent minutes apart) and re-emits them by cached `file_id`, so nothing is re-uploaded.
-Add a caption when sending the album (or send the text before the photos) and it
-appears below the carousel.
-If Telegram rejects the slideshow, it falls back to a classic album (`sendMediaGroup`).
+Send the bot several photos (as an album or one by one) and it turns them into a
+post with a native Telegram **slideshow** — dot indicators on the image, swipable in
+place — that you can forward to channels. Built on rich messages (`sendRichMessage`,
+Bot API 10.2, July 2026). The flow: photos in (a caption on the album becomes the
+text below the carousel), then the bot asks for a post title, which you can skip.
+Photos are re-emitted by cached `file_id`, so nothing is re-uploaded, and the bot
+keeps no persistent state. If Telegram rejects the rich message, it falls back to a
+classic album (`sendMediaGroup`) with the title folded into the caption.
 
 ## Run locally
 
