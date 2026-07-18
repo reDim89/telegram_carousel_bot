@@ -6,12 +6,11 @@ from aiogram.types import InputMediaPhoto, InputRichMessage, InputRichMessageMed
 ALBUM_LIMIT = 10
 
 
-def _paragraphs(text: str) -> str:
-    # Raw newlines are just whitespace in HTML: blank lines become <p>
-    # paragraphs, single newlines become <br>.
-    return "".join(
-        f"<p>{p.strip().replace(chr(10), '<br>')}</p>" for p in text.split("\n\n") if p.strip()
-    )
+def _text_block(text: str) -> str:
+    # Raw newlines are just whitespace in HTML, so every newline becomes <br>.
+    # Deliberately NOT split into <p> per blank line: clients render <p> gaps
+    # smaller than a real empty line, so <br><br> is the faithful reproduction.
+    return f"<p>{text.replace(chr(10), '<br>')}</p>"
 
 
 def post_message(
@@ -28,9 +27,9 @@ def post_message(
     images = "".join(f'<img src="tg://photo?id=p{i}">' for i in range(len(file_ids)))
     parts = []
     if body:
-        parts.append(_paragraphs(body))
+        parts.append(_text_block(body))
     if caption:
-        parts.append(_paragraphs(caption))
+        parts.append(_text_block(caption))
     if len(file_ids) == 1:
         parts.append(images)
     else:

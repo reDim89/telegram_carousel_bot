@@ -31,11 +31,13 @@ def test_post_message_passes_user_html_through_verbatim():
     assert f"<p>{body}</p><p>{caption}</p>" in msg.html
 
 
-def test_post_message_converts_newlines_to_paragraphs_and_breaks():
+def test_post_message_reproduces_line_breaks_exactly():
     caption = "<b>First para</b>\nsecond line\n\nSecond para\n\n\nThird para"
     msg = post_message(["f1", "f2"], caption=caption)
+    # One <br> per newline: an empty line in the source stays an empty line.
     assert msg.html.startswith(
-        "<p><b>First para</b><br>second line</p><p>Second para</p><p>Third para</p><tg-slideshow>"
+        "<p><b>First para</b><br>second line<br><br>Second para<br><br><br>Third para</p>"
+        "<tg-slideshow>"
     )
 
 
