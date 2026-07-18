@@ -5,6 +5,8 @@ post with a native Telegram **slideshow** — dot indicators on the image, swipa
 place — that you can forward to channels. Built on rich messages (`sendRichMessage`,
 Bot API 10.2, July 2026). The flow: photos in (a caption on the album becomes the
 text below the carousel), then the bot asks for a post title, which you can skip.
+Formatting in the caption and title — bold, italic, links, spoilers, custom emoji —
+is preserved exactly as sent.
 Photos are re-emitted by cached `file_id`, so nothing is re-uploaded, and the bot
 keeps no persistent state. If Telegram rejects the rich message, it falls back to a
 classic album (`sendMediaGroup`) with the title folded into the caption.

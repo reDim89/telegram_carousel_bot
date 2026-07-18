@@ -25,8 +25,10 @@ TITLE_KEYBOARD = InlineKeyboardMarkup(
 
 
 async def send_post(bot: Bot, chat_id: int, post: PendingPost, post_title: str | None) -> None:
+    # post.caption and post_title are Telegram-HTML (from Message.html_text),
+    # so every plain-send path below must use parse_mode="HTML".
     if len(post.file_ids) == 1 and not post_title:
-        await bot.send_photo(chat_id, post.file_ids[0], caption=post.caption)
+        await bot.send_photo(chat_id, post.file_ids[0], caption=post.caption, parse_mode="HTML")
         return
     try:
         await bot.send_rich_message(
@@ -36,14 +38,19 @@ async def send_post(bot: Bot, chat_id: int, post: PendingPost, post_title: str |
         # Rich messages are new (Bot API 10.2); fall back to a classic album with
         # the title folded into the caption.
         logger.warning("Rich post rejected (%s), falling back to media group", e)
-        caption = "\n\n".join(filter(None, [post_title, post.caption])) or None
+        bold_title = f"<b>{post_title}</b>" if post_title else None
+        caption = "\n\n".join(filter(None, [bold_title, post.caption])) or None
         for album in build_albums(post.file_ids):
             if len(album) == 1:
-                await bot.send_photo(chat_id, album[0], caption=caption)
+                await bot.send_photo(chat_id, album[0], caption=caption, parse_mode="HTML")
             else:
                 # A single captioned item shows the text below the whole album.
                 media = [
-                    InputMediaPhoto(media=file_id, caption=caption if i == 0 else None)
+                    InputMediaPhoto(
+                        media=file_id,
+                        caption=caption if i == 0 else None,
+                        parse_mode="HTML" if i == 0 else None,
+                    )
                     for i, file_id in enumerate(album)
                 ]
                 await bot.send_media_group(chat_id, media)

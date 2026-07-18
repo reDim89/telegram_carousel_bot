@@ -14,7 +14,8 @@ PublishCallback = Callable[[int, str | None], Awaitable[bool]]
 
 @router.message(F.text, ~F.text.startswith("/"))
 async def on_title(message: Message, publish: PublishCallback) -> None:
-    if not await publish(message.chat.id, message.text):
+    # html_text keeps the user's formatting entities.
+    if not await publish(message.chat.id, message.html_text):
         await message.answer(NO_PENDING)
 
 
