@@ -15,24 +15,38 @@ def test_post_message_builds_slideshow_html_with_media_refs():
     ]
 
 
-def test_post_message_title_and_caption_order():
-    msg = post_message(["f1", "f2"], caption="cap", title="Summer 2026")
-    assert msg.html.startswith("<h1>Summer 2026</h1><tg-slideshow>")
-    assert msg.html.endswith("</tg-slideshow><p>cap</p>")
+def test_post_message_puts_text_above_photos_without_headings():
+    msg = post_message(["f1", "f2"], caption="cap", body="Typed text")
+    assert msg.html == (
+        "<p>Typed text</p><p>cap</p>"
+        '<tg-slideshow><img src="tg://photo?id=p0"><img src="tg://photo?id=p1"></tg-slideshow>'
+    )
+    assert "<h1>" not in msg.html
 
 
 def test_post_message_passes_user_html_through_verbatim():
     caption = '<b>Wow</b> <a href="https://example.com">link</a>'
-    title = '<i>Trip</i> <tg-emoji emoji-id="5368324170671202286">👍</tg-emoji>'
-    msg = post_message(["f1", "f2"], caption=caption, title=title)
-    assert f"<h1>{title}</h1>" in msg.html
-    assert f"<p>{caption}</p>" in msg.html
+    body = '<i>Trip</i> <tg-emoji emoji-id="5368324170671202286">👍</tg-emoji>'
+    msg = post_message(["f1", "f2"], caption=caption, body=body)
+    assert f"<p>{body}</p><p>{caption}</p>" in msg.html
+
+
+def test_post_message_converts_newlines_to_paragraphs_and_breaks():
+    caption = "<b>First para</b>\nsecond line\n\nSecond para\n\n\nThird para"
+    msg = post_message(["f1", "f2"], caption=caption)
+    assert msg.html.startswith(
+        "<p><b>First para</b><br>second line</p><p>Second para</p><p>Third para</p><tg-slideshow>"
+    )
+
+
+def test_post_message_skips_entity_autodetection():
+    assert post_message(["f1", "f2"]).skip_entity_detection is True
 
 
 def test_post_message_single_photo_has_no_slideshow_tag():
-    msg = post_message(["f1"], caption="cap", title="One shot")
+    msg = post_message(["f1"], caption="cap", body="One shot")
     assert "<tg-slideshow>" not in msg.html
-    assert msg.html == '<h1>One shot</h1><img src="tg://photo?id=p0"><p>cap</p>'
+    assert msg.html == '<p>One shot</p><p>cap</p><img src="tg://photo?id=p0">'
     assert [(m.id, m.media.media) for m in msg.media] == [("p0", "f1")]
 
 

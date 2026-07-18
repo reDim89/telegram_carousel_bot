@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery, Message
 router = Router()
 
 SKIP_CALLBACK = "skip_title"
-NO_PENDING = "Send me some photos first and I'll ask for the title after."
+NO_PENDING = "Send me some photos first and I'll ask for the post text after."
 
 # publish(chat_id, title) sends the pending post; returns False if none pending.
 PublishCallback = Callable[[int, str | None], Awaitable[bool]]

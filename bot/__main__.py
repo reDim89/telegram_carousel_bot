@@ -17,7 +17,7 @@ from bot.pending import PendingPost, merge_pending
 
 logger = logging.getLogger(__name__)
 
-ASK_TITLE = "📝 Send a title for your post, or skip it."
+ASK_TITLE = "📝 Send the post text (shown above the photos), or skip it."
 
 TITLE_KEYBOARD = InlineKeyboardMarkup(
     inline_keyboard=[[InlineKeyboardButton(text="Skip", callback_data=title.SKIP_CALLBACK)]]
@@ -36,10 +36,9 @@ async def send_post(bot: Bot, chat_id: int, post: PendingPost, post_title: str |
         )
     except TelegramBadRequest as e:
         # Rich messages are new (Bot API 10.2); fall back to a classic album with
-        # the title folded into the caption.
+        # the post text folded into the caption.
         logger.warning("Rich post rejected (%s), falling back to media group", e)
-        bold_title = f"<b>{post_title}</b>" if post_title else None
-        caption = "\n\n".join(filter(None, [bold_title, post.caption])) or None
+        caption = "\n\n".join(filter(None, [post_title, post.caption])) or None
         for album in build_albums(post.file_ids):
             if len(album) == 1:
                 await bot.send_photo(chat_id, album[0], caption=caption, parse_mode="HTML")

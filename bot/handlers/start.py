@@ -7,8 +7,8 @@ router = Router()
 WELCOME = (
     "Send me several photos (as an album or one by one) and I'll turn them into "
     "a post with a swipable carousel — forward it anywhere, including channels.\n\n"
-    "Add a caption to the photos to get text below the carousel. After the photos "
-    "I'll ask for a title, which you can skip."
+    "Your text goes above the carousel, exactly as you wrote it: either add a "
+    "caption to the photos, or send the text when I ask after the photos."
 )
 
 
