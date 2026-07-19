@@ -7,7 +7,6 @@ from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     InputMediaPhoto,
-    InputRichMessage,
 )
 
 from bot.carousel import build_albums, post_message
@@ -40,31 +39,6 @@ async def send_post(bot: Bot, chat_id: int, post: PendingPost, position: str) ->
     if len(post.file_ids) == 1 and not post.body and not post.caption:
         await bot.send_photo(chat_id, post.file_ids[0])
         return
-    # When the photos sit at the top of the rich message, clients paint the
-    # channel-name header over the first photo — unless the post is a grouped
-    # continuation of a preceding message, which suppresses the header (and
-    # survives history reloads). So: send a silent lead-in first. It looks
-    # pointless — removing it brings the overlap back. A blank rich paragraph
-    # (U+2800 braille blank) is the least visible predecessor: sendMessage
-    # rejects it ("text must be non-empty" — plain text is stripped of
-    # invisibles), but the rich path validates blocks, not trimmed text. If
-    # even that is rejected, fall back to the first photo (proven to group),
-    # and never let a lead-in failure demote the carousel itself.
-    lead_in = None
-    photos_on_top = position == "below" or not (post.body or post.caption)
-    if photos_on_top:
-        try:
-            lead_in = await bot.send_rich_message(
-                chat_id,
-                rich_message=InputRichMessage(html="<p>\N{BRAILLE PATTERN BLANK}</p>"),
-                disable_notification=True,
-            )
-        except TelegramBadRequest as e:
-            logger.warning("Blank lead-in rejected (%s), using the first photo", e)
-            try:
-                lead_in = await bot.send_photo(chat_id, post.file_ids[0], disable_notification=True)
-            except TelegramBadRequest as e:
-                logger.warning("Photo lead-in rejected too (%s), posting without one", e)
     try:
         await bot.send_rich_message(
             chat_id,
@@ -74,9 +48,6 @@ async def send_post(bot: Bot, chat_id: int, post: PendingPost, position: str) ->
         # Rich messages are new (Bot API 10.2); fall back to a classic album with
         # the text folded into the caption (always below - albums have no choice).
         logger.warning("Rich post rejected (%s), falling back to media group", e)
-        if lead_in is not None:
-            # Albums render their own header correctly; don't leave the blank stray.
-            await bot.delete_message(chat_id, lead_in.message_id)
         caption = "\n\n".join(filter(None, [post.body, post.caption])) or None
         for album in build_albums(post.file_ids):
             if len(album) == 1:
