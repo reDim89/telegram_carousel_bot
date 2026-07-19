@@ -7,6 +7,7 @@ from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     InputMediaPhoto,
+    InputRichMessage,
 )
 
 from bot.carousel import build_albums, post_message
@@ -42,16 +43,29 @@ async def send_post(bot: Bot, chat_id: int, post: PendingPost, position: str) ->
     # When the photos sit at the top of the rich message, clients paint the
     # channel-name header over the first photo — unless the post is a grouped
     # continuation of a preceding message, which suppresses the header (and
-    # survives history reloads). So: send a silent, visually blank lead-in first.
-    # U+2800 (braille blank) because Telegram rejects text that is empty or pure
-    # whitespace. It looks pointless — removing it brings the overlap back.
+    # survives history reloads). So: send a silent lead-in first. It looks
+    # pointless — removing it brings the overlap back. A blank rich paragraph
+    # (U+2800 braille blank) is the least visible predecessor: sendMessage
+    # rejects it ("text must be non-empty" — plain text is stripped of
+    # invisibles), but the rich path validates blocks, not trimmed text. If
+    # even that is rejected, fall back to the first photo (proven to group),
+    # and never let a lead-in failure demote the carousel itself.
     lead_in = None
     photos_on_top = position == "below" or not (post.body or post.caption)
-    try:
-        if photos_on_top:
-            lead_in = await bot.send_message(
-                chat_id, "\N{BRAILLE PATTERN BLANK}", disable_notification=True
+    if photos_on_top:
+        try:
+            lead_in = await bot.send_rich_message(
+                chat_id,
+                rich_message=InputRichMessage(html="<p>\N{BRAILLE PATTERN BLANK}</p>"),
+                disable_notification=True,
             )
+        except TelegramBadRequest as e:
+            logger.warning("Blank lead-in rejected (%s), using the first photo", e)
+            try:
+                lead_in = await bot.send_photo(chat_id, post.file_ids[0], disable_notification=True)
+            except TelegramBadRequest as e:
+                logger.warning("Photo lead-in rejected too (%s), posting without one", e)
+    try:
         await bot.send_rich_message(
             chat_id,
             rich_message=post_message(post.file_ids, post.caption, post.body, position),
