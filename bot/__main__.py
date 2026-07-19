@@ -39,7 +39,19 @@ async def send_post(bot: Bot, chat_id: int, post: PendingPost, position: str) ->
     if len(post.file_ids) == 1 and not post.body and not post.caption:
         await bot.send_photo(chat_id, post.file_ids[0])
         return
+    # When the photos sit at the top of the rich message, clients paint the
+    # channel-name header over the first photo — unless the post is a grouped
+    # continuation of a preceding message, which suppresses the header (and
+    # survives history reloads). So: send a silent, visually blank lead-in first.
+    # U+2800 (braille blank) because Telegram rejects text that is empty or pure
+    # whitespace. It looks pointless — removing it brings the overlap back.
+    lead_in = None
+    photos_on_top = position == "below" or not (post.body or post.caption)
     try:
+        if photos_on_top:
+            lead_in = await bot.send_message(
+                chat_id, "\N{BRAILLE PATTERN BLANK}", disable_notification=True
+            )
         await bot.send_rich_message(
             chat_id,
             rich_message=post_message(post.file_ids, post.caption, post.body, position),
@@ -48,6 +60,9 @@ async def send_post(bot: Bot, chat_id: int, post: PendingPost, position: str) ->
         # Rich messages are new (Bot API 10.2); fall back to a classic album with
         # the text folded into the caption (always below - albums have no choice).
         logger.warning("Rich post rejected (%s), falling back to media group", e)
+        if lead_in is not None:
+            # Albums render their own header correctly; don't leave the blank stray.
+            await bot.delete_message(chat_id, lead_in.message_id)
         caption = "\n\n".join(filter(None, [post.body, post.caption])) or None
         for album in build_albums(post.file_ids):
             if len(album) == 1:
