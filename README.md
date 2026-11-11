@@ -30,16 +30,32 @@ uv run ruff check . && uv run ruff format .   # lint / format
 
 ## Deploy
 
-GitHub Actions handles it: every push/PR runs lint + tests (`ci.yml`); pushes to
-`master` build the image, publish it to GHCR, and restart the bot on the VM over SSH
-(`deploy.yml`).
+The bot runs on a self-hosted Linux machine as a **systemd user service** (no Docker,
+no root), and deploys are pull-based: a systemd timer checks `origin/master` every
+couple of minutes, and on a new commit fast-forwards the deploy checkout, runs
+`uv sync`, and restarts the bot. GitHub Actions only runs lint + tests (`ci.yml`);
+nothing connects into the machine, so there are no deploy secrets and no open ports.
 
-One-time setup:
+One-time setup on the machine (needs `git` and [uv](https://docs.astral.sh/uv/)):
 
-- **VM**: install Docker, create `~/telegram_carousel_bot/` containing
-  `docker-compose.yml` and a `.env` with the real `BOT_TOKEN`. If the GHCR package is
-  private, run `docker login ghcr.io` once with a read-only token.
-- **GitHub repo secrets**: `VM_HOST`, `VM_USER`, `VM_SSH_KEY` (private key whose public
-  half is in the VM user's `authorized_keys`).
+```bash
+git clone https://github.com/reDim89/telegram_carousel_bot && cd telegram_carousel_bot
+./deploy/install.sh
+install -m 600 /dev/null ~/services/telegram_carousel_bot/.env
+echo 'BOT_TOKEN=...' >> ~/services/telegram_carousel_bot/.env   # real @BotFather token
+systemctl --user start telegram-carousel-bot
+```
+
+`install.sh` creates the deploy checkout in `~/services/telegram_carousel_bot`, installs
+the units from `deploy/` into `~/.config/systemd/user`, and enables lingering so the bot
+starts at boot without a login session. Re-run it after changing anything in `deploy/`.
+
+```bash
+systemctl --user status telegram-carousel-bot        # is it up?
+journalctl --user -u telegram-carousel-bot -f        # bot logs
+journalctl --user -u telegram-carousel-bot-update    # deploy history
+```
+
+Only one instance may poll a given bot token — stop any other deployment first.
 
 The bot is stateless — no volumes, no database; redeploys are free of migrations.

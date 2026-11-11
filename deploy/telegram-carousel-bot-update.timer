@@ -1,0 +1,10 @@
+[Unit]
+Description=Check for new commits of the Telegram carousel bot
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=2min
+RandomizedDelaySec=15
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Telegram carousel bot
+After=network-online.target
+Wants=network-online.target
+# No token yet -> stay stopped instead of crash-looping.
+ConditionPathExists=%h/services/telegram_carousel_bot/.env
+
+[Service]
+WorkingDirectory=%h/services/telegram_carousel_bot
+EnvironmentFile=%h/services/telegram_carousel_bot/.env
+ExecStart=%h/.local/bin/uv run --frozen --no-dev python -m bot
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=default.target
