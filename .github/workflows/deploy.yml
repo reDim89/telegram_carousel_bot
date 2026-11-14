@@ -1,4 +1,4 @@
-name: Deploy
+name: Build image
 
 on:
   push:
@@ -31,17 +31,5 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          script: |
-            cd ~/telegram_carousel_bot
-            docker compose pull
-            docker compose up -d
-            docker image prune -f
+  # No deploy job: the host is only reachable over a private network, so GitHub
+  # runners cannot SSH to it. Rolling out the new image is a manual step (see README).

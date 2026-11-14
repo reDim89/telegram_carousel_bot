@@ -30,16 +30,20 @@ uv run ruff check . && uv run ruff format .   # lint / format
 
 ## Deploy
 
-GitHub Actions handles it: every push/PR runs lint + tests (`ci.yml`); pushes to
-`master` build the image, publish it to GHCR, and restart the bot on the VM over SSH
-(`deploy.yml`).
+Every push/PR runs lint + tests (`ci.yml`); pushes to `master` build the image and
+publish it to GHCR (`deploy.yml`). Rolling the new image out is manual, because the
+host is only reachable over a private network that GitHub runners cannot SSH into.
+Once the build has finished, run on the host (or over SSH):
 
-One-time setup:
+```bash
+cd ~/telegram_carousel_bot && docker compose pull && docker compose up -d
+```
 
-- **VM**: install Docker, create `~/telegram_carousel_bot/` containing
-  `docker-compose.yml` and a `.env` with the real `BOT_TOKEN`. If the GHCR package is
-  private, run `docker login ghcr.io` once with a read-only token.
-- **GitHub repo secrets**: `VM_HOST`, `VM_USER`, `VM_SSH_KEY` (private key whose public
-  half is in the VM user's `authorized_keys`).
+One-time host setup: install Docker, create `~/telegram_carousel_bot/` containing
+`docker-compose.yml` and a `.env` with the real `BOT_TOKEN`. If the GHCR package is
+private, run `docker login ghcr.io` once with a read-only token.
+
+Only one host may run the bot per token — Telegram rejects a second long-polling
+instance.
 
 The bot is stateless — no volumes, no database; redeploys are free of migrations.

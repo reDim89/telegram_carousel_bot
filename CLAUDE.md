@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-A Telegram bot that accepts a set of images from a user and turns them into a swipable carousel. Source lives on GitHub; CI/CD via GitHub Actions deploys to a single VM.
+A Telegram bot that accepts a set of images from a user and turns them into a swipable carousel. Source lives on GitHub; GitHub Actions runs CI and builds the image; it runs on a single host, rolled out manually.
 
 ## Stack
 
 - Python 3.12+, **aiogram 3** (async), managed with **uv** (`pyproject.toml` + `uv.lock`)
 - Lint/format: **ruff**; tests: **pytest** (+ pytest-asyncio)
-- Runs in Docker on the VM via docker compose; images published to GHCR
+- Runs in Docker on the host via docker compose; images published to GHCR
 
 ## Commands
 
@@ -35,12 +35,13 @@ The flow:
 2. **Dialog steps** — the collector flush does not publish; it stores a `PendingPost` (`pending.py`, in-memory per-chat dict) and asks for the post text (inline Skip button). The next plain text message is the post body (routed by `handlers/title.py` — this is why free text is *not* a caption). Then, if the post has any text (body or caption), the bot asks where it goes — ⬆️ above / ⬇️ below buttons — and publishes on that choice; with no text it publishes immediately after Skip. Photos sent mid-dialog merge into the same pending post and restart it at the text question. Dialog orchestration (`submit_text`/`publish` callbacks) lives in `__main__.py` closures.
 3. **Rendering** — `send_post` sends one rich message built by `carousel.py:post_message` as **HTML** (`InputRichMessage.html` + `media` list; photos referenced by `tg://photo?id=` links): the text (body and/or photo caption) as plain `<p>` blocks above or below the `<tg-slideshow>` of `<img>`s per the user's position choice. **No headings** — `<h1>` restyles the user's text into large serif type, which was explicitly rejected; raw newlines are whitespace in HTML, so every `\n` → `<br>` within a single `<p>` (`_text_block`) — do *not* split blank lines into separate `<p>` blocks, clients render `<p>` gaps smaller than a real empty line. HTML (not blocks) is deliberate: text is captured with `Message.html_text`, which preserves the user's formatting entities (bold, links, spoilers, custom emoji) verbatim — **every string in `PendingPost` is Telegram-HTML, so any plain send path must pass `parse_mode="HTML"`** — and `skip_entity_detection=True` prevents Telegram from layering auto-detected entities on top. On `TelegramBadRequest` it falls back to classic albums with body+caption joined as the album caption: media groups hold 2–10 items, so `carousel.py:build_albums` splits N photos into balanced chunks (11 → 6+5, never 10+1); a chunk of exactly 1 must go via `send_photo`, not `send_media_group`.
 
-The bot uses **long polling**, not webhooks — no public HTTPS endpoint, domain, or open port needed on the VM.
+The bot uses **long polling**, not webhooks — no public HTTPS endpoint, domain, or open port needed on the host.
 
 Layout: `bot/` package — `__main__.py` (wiring, `send_post`, polling entrypoint), `collector.py` (debounced photo aggregation), `pending.py` (posts awaiting a title), `carousel.py` (pure message/album building), `handlers/` (thin aiogram routers; `collector` and the `publish` callback are injected via `Dispatcher(...)` kwargs). `tests/` covers collector, pending, and message-building logic without a live bot — keep it that way.
 
 ## CI/CD (GitHub Actions)
 
 - **PRs / pushes**: ruff + pytest.
-- **Push to master** (the default branch): build the Docker image, push to GHCR, then SSH to the VM and run `docker compose pull && docker compose up -d`.
-- GitHub secrets hold the VM SSH key/host; `BOT_TOKEN` lives only on the VM in its `.env`, never in the repo or workflow files.
+- **Push to master** (the default branch): build the Docker image and push it to GHCR (`deploy.yml`). There is no deploy job — the host is only reachable over a private network, so GitHub runners cannot SSH to it.
+- **Rollout is manual**: after the image build finishes, run `docker compose pull && docker compose up -d` in `~/telegram_carousel_bot` on the host. Only one host may poll per bot token.
+- `BOT_TOKEN` lives only on the host in its `.env`, never in the repo or workflow files.
